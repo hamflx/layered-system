@@ -21,6 +21,7 @@ use crate::paths::AppPaths;
 use crate::state::SharedState;
 use crate::sys::{run_elevated_command, CommandOutput};
 use crate::temp::TempManager;
+use windows_sys::Win32::Storage::FileSystem::GetLogicalDrives;
 
 pub struct WorkspaceService<'a> {
     state: &'a SharedState,
@@ -92,12 +93,14 @@ impl<'a> WorkspaceService<'a> {
 
         let temp = TempManager::new(paths.tmp_dir())?;
         fs::create_dir_all(paths.mount_root())?;
-        let efi_letter = pick_drive_letter()?;
+        let efi_letter = pick_free_letter().ok_or_else(|| {
+            AppError::Message("no free drive letter available between S: and Z:".into())
+        })?;
         let efi_mount = PathBuf::from(format!("{efi_letter}:"));
         let sys_mount = paths.mount_root().join(format!("sys-{id}"));
         fs::create_dir_all(&sys_mount)?;
 
-        let script = base_diskpart_script(&vhd_path, size_gb, &efi_letter, &sys_mount);
+        let script = base_diskpart_script(&vhd_path, size_gb, efi_letter, &sys_mount);
         let script_path = temp.write_script("create_base.txt", &script)?;
         let create_res = run_diskpart_script(&script_path)?;
         log_command("diskpart create base", &create_res, Some(&script_path));
@@ -174,12 +177,15 @@ impl<'a> WorkspaceService<'a> {
 
         let temp = TempManager::new(paths.tmp_dir())?;
         let sys_mount = paths.mount_root().join(format!("sys-{id}"));
-        let efi_letter = pick_drive_letter()?;
-        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
         fs::create_dir_all(&sys_mount)?;
 
+        let efi_letter = pick_free_letter().ok_or_else(|| {
+            AppError::Message("no free drive letter available between S: and Z:".into())
+        })?;
+        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
+
         let script =
-            diff_diskpart_script(&vhd_path, Path::new(&parent.path), &efi_letter, &sys_mount);
+            diff_diskpart_script(&vhd_path, Path::new(&parent.path), efi_letter, &sys_mount);
         let script_path = temp.write_script("create_diff.txt", &script)?;
         let res = run_diskpart_script(&script_path)?;
         log_command("diskpart create diff", &res, Some(&script_path));
@@ -385,6 +391,21 @@ fn bcdedit_boot_sequence_and_reboot(guid: &str) -> Result<CommandOutput> {
     Ok(res)
 }
 
+fn pick_free_letter() -> Option<char> {
+    let mask = unsafe { GetLogicalDrives() };
+    if mask == 0 {
+        return None;
+    }
+    for letter in b'S'..=b'Z' {
+        let idx = (letter - b'A') as u32;
+        let in_use = (mask & (1 << idx)) != 0;
+        if !in_use {
+            return Some(letter as char);
+        }
+    }
+    None
+}
+
 fn log_command(name: &str, output: &CommandOutput, script: Option<&Path>) {
     let mut parts = Vec::new();
     if let Some(code) = output.exit_code {
@@ -421,18 +442,6 @@ fn command_error(name: &str, output: &CommandOutput, script: Option<&Path>) -> A
         parts.push("no output".into());
     }
     AppError::Message(format!("{name} failed: {}", parts.join(" | ")))
-}
-
-fn pick_drive_letter() -> Result<String> {
-    for letter in 'S'..='Z' {
-        let candidate = format!("{}:\\", letter);
-        if !Path::new(&candidate).exists() {
-            return Ok(letter.to_string());
-        }
-    }
-    Err(AppError::Message(
-        "no free drive letter available between S: and Z:".into(),
-    ))
 }
 
 fn truncate(text: &str, max: usize) -> String {

@@ -30,7 +30,7 @@ pub fn run_diskpart_script(script_path: &Path) -> Result<CommandOutput> {
 pub fn base_diskpart_script(
     vhd_path: &Path,
     size_gb: u64,
-    efi_letter: &str,
+    efi_letter: char,
     sys_mount: &Path,
 ) -> String {
     let size_mb = size_gb * 1024;
@@ -52,18 +52,12 @@ list partition
 "#,
         vhd = vhd_path.display(),
         size_mb = size_mb,
-        efi_letter = efi_letter,
         sys_mount = sys_mount.display()
     )
 }
 
 /// Script to create a differencing VHDX.
-pub fn diff_diskpart_script(
-    child: &Path,
-    parent: &Path,
-    efi_letter: &str,
-    sys_mount: &Path,
-) -> String {
+pub fn diff_diskpart_script(child: &Path, parent: &Path, efi_letter: char, sys_mount: &Path) -> String {
     format!(
         r#"
 create vdisk file="{child}" parent="{parent}"
@@ -72,7 +66,7 @@ attach vdisk
 select partition 3
 assign mount="{sys_mount}"
 select partition 1
-assign letter={efi_letter}
+assign letter={efi_letter} noerr
 list volume
 list partition
 "#,
