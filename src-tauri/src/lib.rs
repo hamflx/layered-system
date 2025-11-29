@@ -1,11 +1,16 @@
+mod bcd;
 mod commands;
 mod db;
+mod diskpart;
+mod dism;
 mod error;
 mod logging;
+mod models;
 mod paths;
 mod state;
 mod sys;
 mod temp;
+mod workspace;
 
 use state::SharedState;
 
@@ -19,7 +24,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::check_admin,
             commands::get_settings,
-            commands::init_root
+            commands::init_root,
+            commands::scan_workspace,
+            commands::list_wim_images,
+            commands::create_base_vhd,
+            commands::create_diff_vhd,
+            commands::set_bootsequence_and_reboot,
+            commands::delete_subtree,
+            commands::repair_bcd
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

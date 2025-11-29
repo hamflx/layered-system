@@ -6,6 +6,7 @@ use rusqlite::{params, Connection};
 use serde::Serialize;
 
 use crate::error::{AppError, Result};
+use crate::models::{Node, NodeStatus};
 use crate::paths::AppPaths;
 
 #[derive(Debug, Clone, Serialize)]
@@ -133,6 +134,115 @@ impl Database {
             },
         )?;
         Ok(settings)
+    }
+
+    pub fn insert_node(&self, node: &Node) -> Result<()> {
+        let mut conn = self.connection();
+        conn.execute(
+            "INSERT INTO nodes (id, parent_id, name, path, bcd_guid, desc, created_at, status, boot_files_ready) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                node.id,
+                node.parent_id,
+                node.name,
+                node.path,
+                node.bcd_guid,
+                node.desc,
+                node.created_at.to_rfc3339(),
+                format!("{:?}", node.status),
+                node.boot_files_ready as i32
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_node_status(&self, id: &str, status: NodeStatus) -> Result<()> {
+        let mut conn = self.connection();
+        conn.execute(
+            "UPDATE nodes SET status = ?1 WHERE id = ?2",
+            params![format!("{:?}", status), id],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_node_bcd(&self, id: &str, bcd_guid: &str) -> Result<()> {
+        let mut conn = self.connection();
+        conn.execute(
+            "UPDATE nodes SET bcd_guid = ?1, boot_files_ready = 1 WHERE id = ?2",
+            params![bcd_guid, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn fetch_nodes(&self) -> Result<Vec<Node>> {
+        let conn = self.connection();
+        let mut stmt = conn.prepare(
+            "SELECT id, parent_id, name, path, bcd_guid, desc, created_at, status, boot_files_ready FROM nodes",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let created_at: String = row.get(6)?;
+            Ok(Node {
+                id: row.get(0)?,
+                parent_id: row.get(1)?,
+                name: row.get(2)?,
+                path: row.get(3)?,
+                bcd_guid: row.get(4)?,
+                desc: row.get(5)?,
+                created_at: created_at.parse().unwrap_or_else(|_| chrono::Utc::now()),
+                status: match row.get::<_, String>(7)?.as_str() {
+                    "MissingFile" => NodeStatus::MissingFile,
+                    "MissingParent" => NodeStatus::MissingParent,
+                    "MissingBcd" => NodeStatus::MissingBcd,
+                    "Mounted" => NodeStatus::Mounted,
+                    "Error" => NodeStatus::Error,
+                    _ => NodeStatus::Normal,
+                },
+                boot_files_ready: row.get::<_, i32>(8)? != 0,
+            })
+        })?;
+        Ok(rows.filter_map(rusqlite::Result::ok).collect())
+    }
+
+    pub fn fetch_node(&self, id: &str) -> Result<Option<Node>> {
+        let conn = self.connection();
+        let mut stmt = conn.prepare(
+            "SELECT id, parent_id, name, path, bcd_guid, desc, created_at, status, boot_files_ready FROM nodes WHERE id = ?1",
+        )?;
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            let created_at: String = row.get(6)?;
+            let node = Node {
+                id: row.get(0)?,
+                parent_id: row.get(1)?,
+                name: row.get(2)?,
+                path: row.get(3)?,
+                bcd_guid: row.get(4)?,
+                desc: row.get(5)?,
+                created_at: created_at.parse().unwrap_or_else(|_| chrono::Utc::now()),
+                status: match row.get::<_, String>(7)?.as_str() {
+                    "MissingFile" => NodeStatus::MissingFile,
+                    "MissingParent" => NodeStatus::MissingParent,
+                    "MissingBcd" => NodeStatus::MissingBcd,
+                    "Mounted" => NodeStatus::Mounted,
+                    "Error" => NodeStatus::Error,
+                    _ => NodeStatus::Normal,
+                },
+                boot_files_ready: row.get::<_, i32>(8)? != 0,
+            };
+            Ok(Some(node))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn delete_nodes(&self, ids: &[String]) -> Result<()> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let mut conn = self.connection();
+        for id in ids {
+            conn.execute("DELETE FROM nodes WHERE id = ?1", params![id])?;
+        }
+        Ok(())
     }
 
     pub fn insert_op(

@@ -99,6 +99,16 @@ h1 {
   margin: 12px 0 8px;
 }
 
+.form.column {
+  flex-direction: column;
+}
+
+.form.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
 .form input {
   flex: 1;
   padding: 12px;
@@ -128,6 +138,10 @@ h1 {
   transform: translateY(0);
 }
 
+.card h3 {
+  margin: 0 0 8px 0;
+}
+
 .message {
   margin-top: 8px;
   padding: 12px 14px;
@@ -147,6 +161,62 @@ h1 {
   border-color: #f2d4d0;
   background: #fff4f2;
   color: #c14242;
+}
+
+.nodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.node {
+  border: 1px solid #e1e7ef;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fbfdff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.2s ease;
+}
+
+.node.selected {
+  border-color: #2f6fed;
+  box-shadow: 0 6px 20px rgba(47, 111, 237, 0.18);
+}
+
+.node-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.node-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #60718a;
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+
+.pill.small {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
+.wim-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.wim-item {
+  padding: 8px;
+  background: #f4f8ff;
+  border-radius: 8px;
+  border: 1px solid #dfe8f5;
 }
 
 @media (max-width: 720px) {
