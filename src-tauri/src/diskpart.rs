@@ -17,6 +17,13 @@ pub struct VhdDetail {
     pub parent: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct PartitionInfo {
+    pub index: u32,
+    pub kind: String,
+    pub size_mb: Option<u64>,
+}
+
 /// Run a diskpart script stored at `script_path`.
 pub fn run_diskpart_script(script_path: &Path) -> Result<CommandOutput> {
     run_elevated_command(
@@ -31,7 +38,7 @@ pub fn base_diskpart_script(
     vhd_path: &Path,
     size_gb: u64,
     efi_letter: char,
-    sys_mount: &Path,
+    sys_letter: char,
 ) -> String {
     let size_mb = size_gb * 1024;
     format!(
@@ -46,35 +53,41 @@ assign letter={efi_letter}
 create partition msr size=16
 create partition primary
 format quick fs=ntfs label="System"
-assign mount="{sys_mount}"
+assign letter={sys_letter}
 list volume
 list partition
 "#,
         vhd = vhd_path.display(),
         size_mb = size_mb,
-        sys_mount = sys_mount.display()
+        sys_letter = sys_letter
     )
 }
 
-/// Script to create a differencing VHDX.
-pub fn diff_diskpart_script(child: &Path, parent: &Path, efi_letter: char, sys_mount: &Path) -> String {
+/// Script to create a differencing VHDX and list partitions (no letter assignment).
+pub fn diff_attach_list_script(child: &Path, parent: &Path) -> String {
     format!(
         r#"
 create vdisk file="{child}" parent="{parent}"
 select vdisk file="{child}"
 attach vdisk
-select partition 3
-assign mount="{sys_mount}"
-select partition 1
-assign letter={efi_letter} noerr
 list volume
 list partition
 "#,
         child = child.display(),
-        parent = parent.display(),
-        efi_letter = efi_letter,
-        sys_mount = sys_mount.display()
+        parent = parent.display()
     )
+}
+
+/// Script to assign letters to specific partitions on the currently attached VHD.
+pub fn assign_partitions_script(vhd_path: &Path, assignments: &[(u32, char)]) -> String {
+    let mut lines = Vec::new();
+    lines.push(format!(r#"select vdisk file="{}""#, vhd_path.display()));
+    for (part_idx, letter) in assignments {
+        lines.push(format!("select partition {part_idx}"));
+        lines.push(format!("assign letter={letter} noerr"));
+    }
+    lines.push("list volume".into());
+    lines.join("\n")
 }
 
 pub fn detach_vdisk_script(vhd_path: &Path) -> String {
@@ -140,6 +153,49 @@ pub fn parse_list_volume(output: &str) -> Vec<VolumeInfo> {
 /// Parse `detail vdisk` output to get volumes when attached.
 pub fn parse_detail_vdisk_volumes(output: &str) -> Vec<VolumeInfo> {
     parse_list_volume(output)
+}
+
+/// Parse `list partition` output.
+pub fn parse_list_partition(output: &str) -> Vec<PartitionInfo> {
+    let mut parts = Vec::new();
+    for line in output.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("Partition") {
+            let cols: Vec<&str> = trimmed.split_whitespace().collect();
+            if cols.len() >= 4 {
+                let idx = cols[1].parse::<u32>().unwrap_or(0);
+                let kind = cols[2].to_string();
+                let mut size_mb = None;
+                for w in cols.iter().rev() {
+                    if let Some(val) = parse_size_mb(w) {
+                        size_mb = Some(val);
+                        break;
+                    }
+                }
+                parts.push(PartitionInfo {
+                    index: idx,
+                    kind,
+                    size_mb,
+                });
+            }
+        }
+    }
+    parts
+}
+
+fn parse_size_mb(token: &str) -> Option<u64> {
+    let lower = token.to_ascii_lowercase();
+    if lower.ends_with("mb") {
+        let num = lower.trim_end_matches("mb").trim();
+        return num.parse::<u64>().ok();
+    }
+    if lower.ends_with("gb") {
+        let num = lower.trim_end_matches("gb").trim();
+        if let Ok(val) = num.parse::<u64>() {
+            return Some(val * 1024);
+        }
+    }
+    None
 }
 
 pub fn detail_vdisk_script(vhd_path: &Path) -> String {

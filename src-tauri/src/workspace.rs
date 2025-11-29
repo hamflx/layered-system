@@ -11,8 +11,8 @@ use crate::bcd::{
 };
 use crate::db::Database;
 use crate::diskpart::{
-    base_diskpart_script, detach_vdisk_script, detail_vdisk_script, diff_diskpart_script,
-    parse_detail_vdisk_parent, run_diskpart_script,
+    assign_partitions_script, base_diskpart_script, detach_vdisk_script, detail_vdisk_script,
+    diff_attach_list_script, parse_detail_vdisk_parent, parse_list_partition, run_diskpart_script,
 };
 use crate::dism::{apply_image, list_images};
 use crate::error::{AppError, Result};
@@ -93,14 +93,11 @@ impl<'a> WorkspaceService<'a> {
 
         let temp = TempManager::new(paths.tmp_dir())?;
         fs::create_dir_all(paths.mount_root())?;
-        let efi_letter = pick_free_letter().ok_or_else(|| {
+        let (efi_letter, sys_letter) = pick_two_letters().ok_or_else(|| {
             AppError::Message("no free drive letter available between S: and Z:".into())
         })?;
-        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
-        let sys_mount = paths.mount_root().join(format!("sys-{id}"));
-        fs::create_dir_all(&sys_mount)?;
 
-        let script = base_diskpart_script(&vhd_path, size_gb, efi_letter, &sys_mount);
+        let script = base_diskpart_script(&vhd_path, size_gb, efi_letter, sys_letter);
         let script_path = temp.write_script("create_base.txt", &script)?;
         let create_res = run_diskpart_script(&script_path)?;
         log_command("diskpart create base", &create_res, Some(&script_path));
@@ -113,12 +110,14 @@ impl<'a> WorkspaceService<'a> {
             ));
         }
 
-        let dism_res = apply_image(wim_file, wim_index, sys_mount.to_str().unwrap_or_default())?;
+        let dism_res = apply_image(wim_file, wim_index, &format!("{sys_letter}:\\"))?;
         log_command("dism apply", &dism_res, None);
         if dism_res.exit_code.unwrap_or(-1) != 0 {
             return Err(command_error("dism apply", &dism_res, None));
         }
 
+        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
+        let sys_mount = PathBuf::from(format!("{sys_letter}:"));
         let bcd_res = run_bcdboot(&sys_mount, &efi_mount)?;
         log_command("bcdboot", &bcd_res, None);
         if bcd_res.exit_code.unwrap_or(-1) != 0 {
@@ -176,27 +175,63 @@ impl<'a> WorkspaceService<'a> {
         let vhd_path = paths.diff_dir().join(filename);
 
         let temp = TempManager::new(paths.tmp_dir())?;
-        let sys_mount = paths.mount_root().join(format!("sys-{id}"));
-        fs::create_dir_all(&sys_mount)?;
-
-        let efi_letter = pick_free_letter().ok_or_else(|| {
+        let (efi_letter, sys_letter) = pick_two_letters().ok_or_else(|| {
             AppError::Message("no free drive letter available between S: and Z:".into())
         })?;
-        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
 
-        let script =
-            diff_diskpart_script(&vhd_path, Path::new(&parent.path), efi_letter, &sys_mount);
-        let script_path = temp.write_script("create_diff.txt", &script)?;
-        let res = run_diskpart_script(&script_path)?;
-        log_command("diskpart create diff", &res, Some(&script_path));
-        if res.exit_code.unwrap_or(-1) != 0 {
+        let attach_script = diff_attach_list_script(&vhd_path, Path::new(&parent.path));
+        let attach_path = temp.write_script("create_diff.txt", &attach_script)?;
+        let attach_res = run_diskpart_script(&attach_path)?;
+        log_command("diskpart create diff", &attach_res, Some(&attach_path));
+        if attach_res.exit_code.unwrap_or(-1) != 0 {
             return Err(command_error(
                 "diskpart create diff",
-                &res,
-                Some(&script_path),
+                &attach_res,
+                Some(&attach_path),
             ));
         }
 
+        let parts = parse_list_partition(&attach_res.stdout);
+        let sys_part = parts
+            .iter()
+            .find(|p| p.kind.eq_ignore_ascii_case("Primary"))
+            .map(|p| p.index)
+            .or_else(|| {
+                parts
+                    .iter()
+                    .find(|p| p.kind.eq_ignore_ascii_case("Basic"))
+                    .map(|p| p.index)
+            });
+        let efi_part = parts
+            .iter()
+            .find(|p| p.kind.eq_ignore_ascii_case("System"))
+            .map(|p| p.index)
+            .or_else(|| parts.iter().find(|p| p.index == 2).map(|p| p.index));
+
+        let (sys_part, efi_part) = match (sys_part, efi_part) {
+            (Some(s), Some(e)) => (s, e),
+            _ => {
+                return Err(AppError::Message(
+                    "failed to detect system/EFI partitions from list partition".into(),
+                ))
+            }
+        };
+
+        let assign_script =
+            assign_partitions_script(&vhd_path, &[(efi_part, efi_letter), (sys_part, sys_letter)]);
+        let assign_path = temp.write_script("assign_diff.txt", &assign_script)?;
+        let assign_res = run_diskpart_script(&assign_path)?;
+        log_command("diskpart assign diff", &assign_res, Some(&assign_path));
+        if assign_res.exit_code.unwrap_or(-1) != 0 {
+            return Err(command_error(
+                "diskpart assign diff",
+                &assign_res,
+                Some(&assign_path),
+            ));
+        }
+
+        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
+        let sys_mount = PathBuf::from(format!("{sys_letter}:"));
         let bcd_res = run_bcdboot(&sys_mount, &efi_mount)?;
         log_command("bcdboot", &bcd_res, None);
         if bcd_res.exit_code.unwrap_or(-1) != 0 {
@@ -404,6 +439,29 @@ fn pick_free_letter() -> Option<char> {
         }
     }
     None
+}
+
+fn pick_two_letters() -> Option<(char, char)> {
+    let mask = unsafe { GetLogicalDrives() };
+    if mask == 0 {
+        return None;
+    }
+    let mut free = Vec::new();
+    for letter in b'S'..=b'Z' {
+        let idx = (letter - b'A') as u32;
+        let in_use = (mask & (1 << idx)) != 0;
+        if !in_use {
+            free.push(letter as char);
+        }
+        if free.len() >= 2 {
+            break;
+        }
+    }
+    if free.len() >= 2 {
+        Some((free[0], free[1]))
+    } else {
+        None
+    }
 }
 
 fn log_command(name: &str, output: &CommandOutput, script: Option<&Path>) {
