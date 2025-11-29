@@ -1,19 +1,9 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
-}
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+  color: #0f1d2f;
+  background-color: #f5f7fa;
   font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
+  line-height: 1.5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -21,96 +11,151 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
+body {
   margin: 0;
-  padding-top: 10vh;
+  background: linear-gradient(120deg, #f5f7fa 0%, #e9eff7 100%);
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 32px 64px;
+}
+
+.header {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
+.eyebrow {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #577399;
+  margin: 0 0 4px 0;
+  font-size: 0.85rem;
 }
 
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
+h1 {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.locale-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.locale-switcher select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d0d8e0;
+  background: #fff;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #d7e0ea;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(15, 29, 47, 0.08);
 }
 
 .row {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+.label {
+  color: #52657c;
+  font-weight: 600;
 }
 
-a:hover {
-  color: #535bf2;
+.pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
-h1 {
-  text-align: center;
+.pill.ok {
+  background: #e3f9ed;
+  color: #1f8f5f;
 }
 
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+.pill.warn {
+  background: #fff4e5;
+  color: #b66a06;
 }
 
-button {
+.form {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 8px;
+}
+
+.form input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #d0d8e0;
+  background: #fdfefe;
+  font-size: 1rem;
+}
+
+.form button {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  background: #2f6fed;
+  color: #fff;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 20px rgba(47, 111, 237, 0.3);
 }
 
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
+.form button:hover {
+  transform: translateY(-1px);
 }
 
-input,
-button {
-  outline: none;
+.form button:active {
+  transform: translateY(0);
 }
 
-#greet-input {
-  margin-right: 5px;
+.message {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #dce3ec;
+  background: #f8fafc;
+  color: #314158;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+.message.initialized {
+  border-color: #d5f2df;
+  background: #f3fcf7;
+  color: #1f8f5f;
+}
+
+.message.error {
+  border-color: #f2d4d0;
+  background: #fff4f2;
+  color: #c14242;
+}
+
+@media (max-width: 720px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
+  .form {
+    flex-direction: column;
   }
 }

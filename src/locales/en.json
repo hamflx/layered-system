@@ -1,0 +1,15 @@
+{
+  "title": "Layered VHDX Manager",
+  "subtitle": "Initialize workspace and check prerequisites",
+  "admin-status": "Administrator: {{status}}",
+  "admin-yes": "Yes",
+  "admin-no": "No",
+  "root-placeholder": "Root directory (will create base/diff/meta...)",
+  "init-root": "Initialize root",
+  "status-uninitialized": "Workspace not initialized.",
+  "status-initialized": "Workspace initialized at: {{path}}",
+  "status-error": "Error: {{msg}}",
+  "locale-label": "Locale",
+  "locale-zh": "Simplified Chinese",
+  "locale-en": "English"
+}

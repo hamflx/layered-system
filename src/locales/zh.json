@@ -1,0 +1,15 @@
+{
+  "title": "分层 VHDX 管理器",
+  "subtitle": "初始化工作根目录并检查前置条件",
+  "admin-status": "管理员权限：{{status}}",
+  "admin-yes": "是",
+  "admin-no": "否",
+  "root-placeholder": "根目录（将创建 base/diff/meta...）",
+  "init-root": "初始化根目录",
+  "status-uninitialized": "工作区尚未初始化。",
+  "status-initialized": "已初始化根目录：{{path}}",
+  "status-error": "错误：{{msg}}",
+  "locale-label": "语言",
+  "locale-zh": "简体中文",
+  "locale-en": "英语"
+}
