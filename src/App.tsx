@@ -325,7 +325,7 @@ function App() {
             >
               <div className="node-title">
                 <strong>{n.name}</strong>
-                <span className={`pill small ${n.status === "Normal" ? "ok" : "warn"}`}>{n.status}</span>
+                <span className={`pill small ${n.status === "normal" ? "ok" : "warn"}`}>{n.status}</span>
               </div>
               <div className="node-sub">
                 <span>{n.path}</span>
