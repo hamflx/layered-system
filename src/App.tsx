@@ -260,6 +260,23 @@ function App() {
     }
   }, [selectedNode, runCommand, refreshNodes, t]);
 
+  const handleCloseWorkspace = useCallback(() => {
+    setWorkspaceReady(false);
+    setNodes([]);
+    setSelectedNode("");
+    setWimImages([]);
+    setWimPath("");
+    setWimIndex(1);
+    setBaseName("base");
+    setBaseSize(60);
+    setBaseDesc("");
+    setDiffName("child");
+    setDiffDesc("");
+    setStatus("idle");
+    setMessage(t("message-workspace-closed"));
+    setRootPath("");
+  }, [t]);
+
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-br from-peach-50 via-peach-200/50 to-peach-400/40 font-sans text-ink-900">
       <main className="mx-auto flex h-full max-w-6xl flex-col gap-4 px-3 py-4 sm:px-5 sm:py-5 lg:px-6">
@@ -341,6 +358,14 @@ function App() {
                   loading={isBusy("scan_workspace")}
                 >
                   {t("check-button")}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleCloseWorkspace}
+                  disabled={isBusy()}
+                  loading={isBusy()}
+                >
+                  {t("close-workspace")}
                 </Button>
                 <Badge
                   tone={status === "initialized" ? "positive" : status === "error" ? "danger" : "neutral"}

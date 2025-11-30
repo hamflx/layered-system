@@ -21,6 +21,8 @@
   "message-deleted": "Subtree deleted.",
   "message-repaired-bcd": "Repaired BCD: {{guid}}",
   "message-no-guid": "no guid",
+  "message-workspace-closed": "Workspace closed.",
+  "close-workspace": "Close workspace",
   "node-status": {
     "normal": "Normal",
     "missing-file": "Missing file",

@@ -21,6 +21,8 @@
   "message-deleted": "子树已删除。",
   "message-repaired-bcd": "已修复 BCD：{{guid}}",
   "message-no-guid": "无 GUID",
+  "message-workspace-closed": "工作区已关闭。",
+  "close-workspace": "关闭工作区",
   "node-status": {
     "normal": "正常",
     "missing-file": "缺少文件",
