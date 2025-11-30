@@ -1,5 +1,7 @@
 # 告别重装系统：我用 VHDX 差分链给 Windows 写了个“时光机”
 
+GitHub 项目地址：[https://github.com/hamflx/layered-system](https://github.com/hamflx/layered-system)
+
 ## 前言：作为“工具党”的烦恼
 
 作为一个开发者，我的电脑就是我的战场。为了开发某个项目，你安装了一堆特定的 SDK、运行时环境、数据库中间件；为了调试某个诡异的 bug，你修改了系统环境变量、注册表，甚至替换了系统 DLL。又或者，为了测试某个合作方发来的（可能不太干净的）软件，你不得不硬着头皮在主力机上运行它。
