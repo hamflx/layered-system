@@ -29,6 +29,7 @@ pub fn bcdedit_delete(guid: &str) -> Result<CommandOutput> {
 pub fn extract_guid_for_vhd(bcd_output: &str, vhd_path: &str) -> Option<String> {
     let mut current_guid: Option<String> = None;
     let needle = vhd_path.to_ascii_lowercase();
+    let needle_no_brackets = needle.replace(['[', ']'], "");
     for line in bcd_output.lines() {
         let lower = line.to_ascii_lowercase();
         if lower.starts_with("identifier") {
@@ -37,7 +38,10 @@ pub fn extract_guid_for_vhd(bcd_output: &str, vhd_path: &str) -> Option<String> 
             }
         }
         if lower.contains("device") || lower.contains("osdevice") {
-            if lower.contains("vhd") && lower.contains(&needle) {
+            if lower.contains("vhd")
+                && (lower.contains(&needle)
+                    || lower.replace(['[', ']'], "").contains(&needle_no_brackets))
+            {
                 if let Some(guid) = &current_guid {
                     return Some(guid.clone());
                 }
