@@ -117,9 +117,8 @@ impl<'a> WorkspaceService<'a> {
             return Err(command_error("dism apply", &dism_res, None));
         }
 
-        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
         let sys_mount = PathBuf::from(format!("{sys_letter}:"));
-        let bcd_res = run_bcdboot(&sys_mount, &efi_mount)?;
+        let bcd_res = run_bcdboot(&sys_mount)?;
         log_command("bcdboot", &bcd_res, None);
         if bcd_res.exit_code.unwrap_or(-1) != 0 {
             return Err(command_error("bcdboot", &bcd_res, None));
@@ -234,9 +233,8 @@ impl<'a> WorkspaceService<'a> {
             ));
         }
 
-        let efi_mount = PathBuf::from(format!("{efi_letter}:"));
         let sys_mount = PathBuf::from(format!("{sys_letter}:"));
-        let bcd_res = run_bcdboot(&sys_mount, &efi_mount)?;
+        let bcd_res = run_bcdboot(&sys_mount)?;
         log_command("bcdboot", &bcd_res, None);
         if bcd_res.exit_code.unwrap_or(-1) != 0 {
             return Err(command_error("bcdboot", &bcd_res, None));
@@ -362,9 +360,7 @@ impl<'a> WorkspaceService<'a> {
         let paths = self.paths()?;
         let temp = TempManager::new(paths.tmp_dir())?;
         let sys_mount = paths.mount_root().join(format!("sys-{node_id}"));
-        let efi_mount = paths.mount_root().join("efi");
         fs::create_dir_all(&sys_mount)?;
-        fs::create_dir_all(&efi_mount)?;
 
         let attach_script = detail_vdisk_script(Path::new(&node.path));
         let attach_path = temp.write_script("attach_repair.txt", &attach_script)?;
@@ -379,7 +375,7 @@ impl<'a> WorkspaceService<'a> {
             ));
         }
 
-        let bcd_res = run_bcdboot(&sys_mount, &efi_mount)?;
+        let bcd_res = run_bcdboot(&sys_mount)?;
         log_command("bcdboot", &bcd_res, None);
         if bcd_res.exit_code.unwrap_or(-1) != 0 {
             return Err(command_error("bcdboot", &bcd_res, None));

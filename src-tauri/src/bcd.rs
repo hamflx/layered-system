@@ -3,17 +3,14 @@ use std::path::Path;
 use crate::error::Result;
 use crate::sys::{run_elevated_command, CommandOutput};
 
-pub fn run_bcdboot(system_dir: &Path, efi_mount: &Path) -> Result<CommandOutput> {
+/// Run bcdboot using the host's default system BCD store (omit /s and /f).
+pub fn run_bcdboot(system_dir: &Path) -> Result<CommandOutput> {
     let sys_path = system_dir
         .to_str()
         .map(|s| s.to_string())
         .unwrap_or_else(|| system_dir.to_string_lossy().to_string());
-    let efi_path = efi_mount
-        .to_str()
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| efi_mount.to_string_lossy().to_string());
     let sys_arg = format!("{sys_path}\\Windows");
-    run_elevated_command("bcdboot", &[&sys_arg, "/s", &efi_path, "/f", "UEFI"], None)
+    run_elevated_command("bcdboot", &[&sys_arg, "/d"], None)
 }
 
 pub fn bcdedit_enum_all() -> Result<CommandOutput> {
