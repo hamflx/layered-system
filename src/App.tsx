@@ -53,6 +53,16 @@ function App() {
   const [diffDesc, setDiffDesc] = useState("");
   const [selectedNode, setSelectedNode] = useState("");
 
+  type TreeNode = Node & { children: TreeNode[] };
+  const statusLabels: Record<NodeStatus, string> = {
+    normal: "正常",
+    missing_file: "缺少文件",
+    missing_parent: "缺少父节点",
+    missing_bcd: "缺少 BCD",
+    mounted: "已挂载",
+    error: "错误",
+  };
+
   const adminLabel = useMemo(() => {
     if (admin === null) return "...";
     return admin ? t("admin-yes") : t("admin-no");
@@ -206,6 +216,80 @@ function App() {
     }
   };
 
+  const treeData = useMemo<TreeNode[]>(() => {
+    const map = new Map<string, TreeNode>();
+    nodes.forEach((n) => map.set(n.id, { ...n, children: [] }));
+    const roots: TreeNode[] = [];
+
+    map.forEach((node) => {
+      const parentId = node.parent_id || "";
+      if (parentId && map.has(parentId)) {
+        map.get(parentId)!.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+
+    const sortRecursively = (list: TreeNode[]) => {
+      list.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+      list.forEach((child) => sortRecursively(child.children));
+    };
+    sortRecursively(roots);
+    return roots;
+  }, [nodes]);
+
+  const selectedDetail = useMemo(
+    () => nodes.find((n) => n.id === selectedNode) || null,
+    [nodes, selectedNode],
+  );
+
+  const parentNode = useMemo(
+    () => nodes.find((n) => n.id === selectedDetail?.parent_id) || null,
+    [nodes, selectedDetail],
+  );
+
+  useEffect(() => {
+    if (!nodes.length) {
+      setSelectedNode("");
+      return;
+    }
+    if (!selectedNode) {
+      setSelectedNode(nodes[0].id);
+    } else if (!nodes.some((n) => n.id === selectedNode)) {
+      setSelectedNode(nodes[0].id);
+    }
+  }, [nodes, selectedNode]);
+
+  const renderTree = (list: TreeNode[]) => {
+    if (!list.length) return <div className="empty">暂无节点</div>;
+    return (
+      <ul className="tree-list">
+        {list.map((node) => (
+          <li key={node.id}>
+            <div
+              className={`tree-node ${selectedNode === node.id ? "selected" : ""}`}
+              onClick={() => setSelectedNode(node.id)}
+            >
+              <div className="tree-title">
+                <span className="node-name">{node.name}</span>
+                <span className={`pill tiny status-${node.status}`}>{statusLabels[node.status]}</span>
+              </div>
+              <div className="node-meta">
+                <span className="mono">{node.id}</span>
+                <span className={`chip ${node.boot_files_ready ? "ok" : "warn"}`}>
+                  {node.boot_files_ready ? "引导已写" : "引导未写"}
+                </span>
+              </div>
+            </div>
+            {node.children.length > 0 && renderTree(node.children)}
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <main className="app">
       <header className="header">
@@ -316,35 +400,63 @@ function App() {
 
       <section className="card">
         <h3>节点管理</h3>
-        <div className="nodes">
-          {nodes.map((n) => (
-            <div
-              key={n.id}
-              className={`node ${selectedNode === n.id ? "selected" : ""}`}
-              onClick={() => setSelectedNode(n.id)}
-            >
-              <div className="node-title">
-                <strong>{n.name}</strong>
-                <span className={`pill small ${n.status === "normal" ? "ok" : "warn"}`}>{n.status}</span>
-              </div>
-              <div className="node-sub">
-                <span>{n.path}</span>
-                <span>{n.bcd_guid ?? "no BCD"}</span>
-              </div>
+        <p className="muted">使用树状视图浏览差分链，点击节点查看详情与操作。</p>
+        <div className="node-panels">
+          <div className="tree-pane">
+            <div className="pane-head">
+              <span>节点树</span>
+              <button className="ghost-btn" onClick={refreshNodes}>
+                刷新
+              </button>
             </div>
-          ))}
-        </div>
-        <div className="form split">
-          <button onClick={refreshNodes}>刷新</button>
-          <button onClick={handleBootReboot} disabled={!selectedNode}>
-            设置下次启动并重启
-          </button>
-          <button onClick={handleRepair} disabled={!selectedNode}>
-            修复 BCD
-          </button>
-          <button onClick={handleDelete} disabled={!selectedNode}>
-            删除子树
-          </button>
+            {renderTree(treeData)}
+          </div>
+          <div className="detail-pane">
+            <div className="pane-head">
+              <span>节点详情</span>
+              {selectedDetail ? <span className="muted">{selectedDetail.name}</span> : <span className="muted">未选择</span>}
+            </div>
+            {selectedDetail ? (
+              <>
+                <div className="detail-grid">
+                  <span className="detail-label">ID</span>
+                  <span className="detail-value mono">{selectedDetail.id}</span>
+                  <span className="detail-label">父节点</span>
+                  <span className="detail-value">{parentNode ? `${parentNode.name} (${parentNode.id})` : "无"}</span>
+                  <span className="detail-label">路径</span>
+                  <span className="detail-value mono">{selectedDetail.path}</span>
+                  <span className="detail-label">BCD GUID</span>
+                  <span className="detail-value mono">{selectedDetail.bcd_guid ?? "缺失"}</span>
+                  <span className="detail-label">创建时间</span>
+                  <span className="detail-value">{selectedDetail.created_at}</span>
+                  <span className="detail-label">状态</span>
+                  <span className="detail-value status-line">
+                    <span className={`pill tiny status-${selectedDetail.status}`}>
+                      {statusLabels[selectedDetail.status]}
+                    </span>
+                    <span className={`chip ${selectedDetail.boot_files_ready ? "ok" : "warn"}`}>
+                      {selectedDetail.boot_files_ready ? "引导文件已写" : "引导文件未写"}
+                    </span>
+                  </span>
+                  <span className="detail-label">描述</span>
+                  <span className="detail-value">{selectedDetail.desc || "无"}</span>
+                </div>
+                <div className="form column tight">
+                  <div className="form split">
+                    <button onClick={handleBootReboot}>设置下次启动并重启</button>
+                    <button onClick={handleRepair}>修复 BCD</button>
+                  </div>
+                  <div className="form split">
+                    <button className="danger" onClick={handleDelete}>
+                      删除子树
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="empty">请选择左侧节点</div>
+            )}
+          </div>
         </div>
       </section>
     </main>
