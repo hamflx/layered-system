@@ -5,6 +5,9 @@ import { NodeDetail } from "./components/NodeDetail";
 import { NodeTree } from "./components/NodeTree";
 import { WorkspaceGate } from "./components/WorkspaceGate";
 import { Node, Settings, StatusLabels, TreeNode, WimImageInfo } from "./types";
+import { Badge } from "./components/ui/Badge";
+import { Button } from "./components/ui/Button";
+import { Card } from "./components/ui/Card";
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -266,9 +269,9 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-peach-50 via-peach-200/50 to-peach-400/40 text-ink-900">
+    <div className="min-h-screen bg-gradient-to-br from-peach-50 via-peach-200/50 to-peach-400/40 font-sans text-ink-900">
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-lg shadow-peach-300/30 backdrop-blur">
+        <Card className="p-5 shadow-lg shadow-peach-300/30">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-peach-400">{t("subtitle")}</p>
@@ -292,7 +295,7 @@ function App() {
               </select>
             </div>
           </div>
-        </header>
+        </Card>
 
         {!workspaceReady ? (
           <WorkspaceGate
@@ -320,45 +323,28 @@ function App() {
           />
         ) : (
           <section className="flex min-h-[60vh] flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-md shadow-peach-300/25 backdrop-blur">
+            <Card className="flex flex-wrap items-center justify-between gap-3 p-4 shadow-md shadow-peach-300/25">
               <div className="flex flex-wrap items-center gap-3">
-                <span
-                  className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
-                    admin
-                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border border-amber-200 bg-amber-50 text-amber-700"
-                  }`}
-                >
+                <Badge tone={admin ? "positive" : "warn"} className="px-3 py-1">
                   {adminLabel}
-                </span>
+                </Badge>
                 <span className="truncate font-mono text-sm text-ink-700">{rootPath}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  className="rounded-xl border border-peach-200/80 bg-white/90 px-3 py-2 text-sm font-semibold text-ink-900 shadow-sm shadow-peach-300/30 transition hover:-translate-y-0.5 hover:border-peach-300 hover:bg-peach-50 focus:outline-none focus:ring-2 focus:ring-peach-300/60"
-                  onClick={refreshNodes}
-                >
+                <Button variant="secondary" onClick={refreshNodes}>
                   {t("refresh-button")}
-                </button>
-                <button
-                  className="rounded-xl border border-peach-200/80 bg-white/90 px-3 py-2 text-sm font-semibold text-ink-900 shadow-sm shadow-peach-300/30 transition hover:-translate-y-0.5 hover:border-peach-300 hover:bg-peach-50 focus:outline-none focus:ring-2 focus:ring-peach-300/60"
-                  onClick={handleCheck}
-                >
+                </Button>
+                <Button variant="secondary" onClick={handleCheck}>
                   {t("check-button")}
-                </button>
-                <span
-                  className={`truncate rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm ${
-                    status === "initialized"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : status === "error"
-                        ? "border-rose-200 bg-rose-50 text-rose-700"
-                        : "border-peach-200 bg-white/80 text-ink-700"
-                  }`}
+                </Button>
+                <Badge
+                  tone={status === "initialized" ? "positive" : status === "error" ? "danger" : "neutral"}
+                  className="max-w-xs truncate px-3 py-2"
                 >
                   {message}
-                </span>
+                </Badge>
               </div>
-            </div>
+            </Card>
 
             <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
               <NodeTree
