@@ -78,6 +78,19 @@ list partition
     )
 }
 
+/// Attach an existing VHD and list its partitions/volumes.
+pub fn attach_list_vdisk_script(vhd_path: &Path) -> String {
+    format!(
+        r#"
+select vdisk file="{vhd}"
+attach vdisk
+list partition
+list volume
+"#,
+        vhd = vhd_path.display()
+    )
+}
+
 /// Script to assign letters to specific partitions on the currently attached VHD.
 pub fn assign_partitions_script(vhd_path: &Path, assignments: &[(u32, char)]) -> String {
     let mut lines = Vec::new();

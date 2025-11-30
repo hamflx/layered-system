@@ -50,3 +50,25 @@ pub fn extract_guid_for_vhd(bcd_output: &str, vhd_path: &str) -> Option<String> 
     }
     None
 }
+
+/// Extract identifier whose device/osdevice references a specific partition letter (e.g., "partition=U:").
+pub fn extract_guid_for_partition_letter(bcd_output: &str, letter: char) -> Option<String> {
+    let mut current_guid: Option<String> = None;
+    let needle = format!("partition={}:", letter.to_ascii_lowercase());
+    for line in bcd_output.lines() {
+        let lower = line.to_ascii_lowercase();
+        if lower.starts_with("identifier") {
+            if let Some(guid) = line.split_whitespace().nth(1) {
+                current_guid = Some(guid.trim().to_string());
+            }
+        }
+        if lower.contains("device") || lower.contains("osdevice") {
+            if lower.contains(&needle) {
+                if let Some(guid) = &current_guid {
+                    return Some(guid.clone());
+                }
+            }
+        }
+    }
+    None
+}

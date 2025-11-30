@@ -8,12 +8,14 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::bcd::{
-    bcdedit_boot_sequence, bcdedit_delete, bcdedit_enum_all, extract_guid_for_vhd, run_bcdboot,
+    bcdedit_boot_sequence, bcdedit_delete, bcdedit_enum_all, extract_guid_for_partition_letter,
+    extract_guid_for_vhd, run_bcdboot,
 };
 use crate::db::Database;
 use crate::diskpart::{
-    assign_partitions_script, base_diskpart_script, detach_vdisk_script, detail_vdisk_script,
-    diff_attach_list_script, parse_detail_vdisk_parent, parse_list_partition, run_diskpart_script,
+    assign_partitions_script, attach_list_vdisk_script, base_diskpart_script, detach_vdisk_script,
+    detail_vdisk_script, diff_attach_list_script, parse_detail_vdisk_parent, parse_list_partition,
+    run_diskpart_script,
 };
 use crate::dism::{apply_image, list_images};
 use crate::error::{AppError, Result};
@@ -251,6 +253,7 @@ impl WorkspaceService {
         let bcd_enum = bcdedit_enum_all()?;
         log_command("bcdedit enum", &bcd_enum, None);
         let guid = extract_guid_for_vhd(&bcd_enum.stdout, vhd_path.to_str().unwrap_or_default())
+            .or_else(|| extract_guid_for_partition_letter(&bcd_enum.stdout, sys_letter))
             .unwrap_or_default();
 
         let detach_script = detach_vdisk_script(&vhd_path, &[efi_letter, sys_letter]);
@@ -272,7 +275,7 @@ impl WorkspaceService {
             desc,
             created_at: Utc::now(),
             status: NodeStatus::Normal,
-            boot_files_ready: true,
+            boot_files_ready: !guid.is_empty(),
         };
 
         db.insert_node(&node)?;
@@ -366,6 +369,7 @@ impl WorkspaceService {
         let bcd_enum = bcdedit_enum_all()?;
         log_command("bcdedit enum", &bcd_enum, None);
         let guid = extract_guid_for_vhd(&bcd_enum.stdout, vhd_path.to_str().unwrap_or_default())
+            .or_else(|| extract_guid_for_partition_letter(&bcd_enum.stdout, sys_letter))
             .unwrap_or_default();
 
         let detach_script = detach_vdisk_script(&vhd_path, &[efi_letter, sys_letter]);
@@ -387,7 +391,7 @@ impl WorkspaceService {
             desc,
             created_at: Utc::now(),
             status: NodeStatus::Normal,
-            boot_files_ready: true,
+            boot_files_ready: !guid.is_empty(),
         };
         db.insert_node(&node)?;
         db.insert_op(
@@ -483,10 +487,11 @@ impl WorkspaceService {
             .ok_or_else(|| AppError::Message("node not found".into()))?;
         let paths = self.paths()?;
         let temp = TempManager::new(paths.tmp_dir())?;
-        let sys_mount = paths.mount_root().join(format!("sys-{node_id}"));
-        fs::create_dir_all(&sys_mount)?;
+        let sys_letter = pick_free_letter().ok_or_else(|| {
+            AppError::Message("no free drive letter available between S: and Z:".into())
+        })?;
 
-        let attach_script = detail_vdisk_script(Path::new(&node.path));
+        let attach_script = crate::diskpart::attach_list_vdisk_script(Path::new(&node.path));
         let attach_path = temp.write_script("attach_repair.txt", &attach_script)?;
         log_diskpart_script(&attach_path);
         let attach_res = run_diskpart_script(&attach_path)?;
@@ -499,6 +504,36 @@ impl WorkspaceService {
             ));
         }
 
+        let parts = parse_list_partition(&attach_res.stdout);
+        let sys_part = parts
+            .iter()
+            .find(|p| p.kind.eq_ignore_ascii_case("Primary"))
+            .map(|p| p.index)
+            .or_else(|| {
+                parts
+                    .iter()
+                    .find(|p| p.kind.eq_ignore_ascii_case("Basic"))
+                    .map(|p| p.index)
+            })
+            .ok_or_else(|| {
+                AppError::Message("failed to detect system partition from list partition".into())
+            })?;
+
+        let assign_script =
+            assign_partitions_script(Path::new(&node.path), &[(sys_part, sys_letter)]);
+        let assign_path = temp.write_script("assign_repair.txt", &assign_script)?;
+        log_diskpart_script(&assign_path);
+        let assign_res = run_diskpart_script(&assign_path)?;
+        log_command("diskpart assign repair", &assign_res, Some(&assign_path));
+        if assign_res.exit_code.unwrap_or(-1) != 0 {
+            return Err(command_error(
+                "diskpart assign",
+                &assign_res,
+                Some(&assign_path),
+            ));
+        }
+
+        let sys_mount = PathBuf::from(format!("{sys_letter}:"));
         let bcd_res = run_bcdboot(&sys_mount)?;
         log_command("bcdboot", &bcd_res, None);
         if bcd_res.exit_code.unwrap_or(-1) != 0 {
@@ -506,12 +541,13 @@ impl WorkspaceService {
         }
         let bcd_enum = bcdedit_enum_all()?;
         log_command("bcdedit enum", &bcd_enum, None);
-        let guid = extract_guid_for_vhd(&bcd_enum.stdout, &node.path);
+        let guid = extract_guid_for_vhd(&bcd_enum.stdout, &node.path)
+            .or_else(|| extract_guid_for_partition_letter(&bcd_enum.stdout, sys_letter));
         if let Some(guid) = &guid {
             db.update_node_bcd(&node.id, guid)?;
         }
 
-        let detach_script = detach_vdisk_script(Path::new(&node.path), &[]);
+        let detach_script = detach_vdisk_script(Path::new(&node.path), &[sys_letter]);
         let detach_path = temp.write_script("detach_repair.txt", &detach_script)?;
         log_diskpart_script(&detach_path);
         if let Ok(o) = run_diskpart_script(&detach_path) {
