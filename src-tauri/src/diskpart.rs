@@ -90,14 +90,17 @@ pub fn assign_partitions_script(vhd_path: &Path, assignments: &[(u32, char)]) ->
     lines.join("\n")
 }
 
-pub fn detach_vdisk_script(vhd_path: &Path) -> String {
-    format!(
-        r#"
-select vdisk file="{vhd}"
-detach vdisk
-"#,
-        vhd = vhd_path.display()
-    )
+pub fn detach_vdisk_script(vhd_path: &Path, letters: &[char]) -> String {
+    let mut lines = Vec::new();
+    let select_vhd = format!(r#"select vdisk file="{}""#, vhd_path.display());
+    lines.push(select_vhd.clone());
+    for letter in letters {
+        lines.push(format!("select volume {letter}"));
+        lines.push(format!("remove letter={letter} noerr"));
+    }
+    lines.push(select_vhd);
+    lines.push("detach vdisk".into());
+    lines.join("\n")
 }
 
 /// Parse output of `detail vdisk` to extract parent path.

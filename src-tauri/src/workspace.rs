@@ -129,7 +129,7 @@ impl<'a> WorkspaceService<'a> {
         let guid = extract_guid_for_vhd(&bcd_enum.stdout, vhd_path.to_str().unwrap_or_default())
             .unwrap_or_default();
 
-        let detach_script = detach_vdisk_script(&vhd_path);
+        let detach_script = detach_vdisk_script(&vhd_path, &[efi_letter, sys_letter]);
         let detach_path = temp.write_script("detach_base.txt", &detach_script)?;
         let detach_res = run_diskpart_script(&detach_path)?;
         log_command("diskpart detach base", &detach_res, Some(&detach_path));
@@ -242,7 +242,7 @@ impl<'a> WorkspaceService<'a> {
         let guid = extract_guid_for_vhd(&bcd_enum.stdout, vhd_path.to_str().unwrap_or_default())
             .unwrap_or_default();
 
-        let detach_script = detach_vdisk_script(&vhd_path);
+        let detach_script = detach_vdisk_script(&vhd_path, &[efi_letter, sys_letter]);
         let detach_path = temp.write_script("detach_diff.txt", &detach_script)?;
         let detach_res = run_diskpart_script(&detach_path)?;
         log_command("diskpart detach diff", &detach_res, Some(&detach_path));
@@ -327,7 +327,7 @@ impl<'a> WorkspaceService<'a> {
                 }
                 // attempt detach
                 let temp = TempManager::new(self.paths()?.tmp_dir())?;
-                let detach_script = detach_vdisk_script(Path::new(&node.path));
+                let detach_script = detach_vdisk_script(Path::new(&node.path), &[]);
                 let path = temp.write_script("detach_cleanup.txt", &detach_script)?;
                 if let Ok(o) = run_diskpart_script(&path) {
                     log_command("diskpart detach cleanup", &o, Some(&path));
@@ -384,7 +384,7 @@ impl<'a> WorkspaceService<'a> {
             db.update_node_bcd(&node.id, guid)?;
         }
 
-        let detach_script = detach_vdisk_script(Path::new(&node.path));
+        let detach_script = detach_vdisk_script(Path::new(&node.path), &[]);
         let detach_path = temp.write_script("detach_repair.txt", &detach_script)?;
         if let Ok(o) = run_diskpart_script(&detach_path) {
             log_command("diskpart detach repair", &o, Some(&detach_path));
