@@ -192,3 +192,33 @@ pub async fn repair_bcd(
     })
     .await
 }
+
+#[tauri::command]
+pub async fn add_bcd_entry(
+    node_id: String,
+    description: Option<String>,
+    state: State<'_, SharedState>,
+) -> CmdResult<Option<String>> {
+    let state = state.inner().clone();
+    run_blocking_cmd(move || {
+        let svc = WorkspaceService::new(state);
+        svc.add_bcd_entry(&node_id, description)
+            .map_err(|e| e.to_string())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn update_bcd_description(
+    node_id: String,
+    description: String,
+    state: State<'_, SharedState>,
+) -> CmdResult<()> {
+    let state = state.inner().clone();
+    run_blocking_cmd(move || {
+        let svc = WorkspaceService::new(state);
+        svc.update_bcd_description(&node_id, &description)
+            .map_err(|e| e.to_string())
+    })
+    .await
+}

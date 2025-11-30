@@ -26,6 +26,7 @@ function App() {
   const [wimImages, setWimImages] = useState<WimImageInfo[]>([]);
   const [diffName, setDiffName] = useState("child");
   const [diffDesc, setDiffDesc] = useState("");
+  const [bcdName, setBcdName] = useState("");
   const [selectedNode, setSelectedNode] = useState("");
 
   const { run: runCommand, isBusy } = useCommandRunner({ setStatus, setMessage, t });
@@ -139,6 +140,7 @@ function App() {
     if (selectedDetail) {
       setDiffName(`${selectedDetail.name}-child`);
       setDiffDesc("");
+      setBcdName(selectedDetail.name);
     }
   }, [selectedDetail?.id]);
 
@@ -249,16 +251,30 @@ function App() {
     }
   }, [selectedNode, runCommand, refreshNodes, t]);
 
-  const handleRepair = useCallback(async () => {
+  const handleAddBcd = useCallback(async () => {
     if (!selectedNode) return;
     try {
-      const guid = await runCommand<string | null>("repair_bcd", { nodeId: selectedNode });
+      const guid = await runCommand<string | null>("add_bcd_entry", {
+        nodeId: selectedNode,
+        description: bcdName || null,
+      });
       setMessage(t("message-repaired-bcd", { guid: guid ?? t("message-no-guid") }));
       await refreshNodes();
     } catch {
       // handled in runCommand
     }
-  }, [selectedNode, runCommand, refreshNodes, t]);
+  }, [selectedNode, runCommand, refreshNodes, bcdName, t]);
+
+  const handleUpdateBcdDesc = useCallback(async () => {
+    if (!selectedNode) return;
+    try {
+      await runCommand("update_bcd_description", { nodeId: selectedNode, description: bcdName });
+      setMessage(t("message-updated-bcd"));
+      await refreshNodes();
+    } catch {
+      // handled in runCommand
+    }
+  }, [selectedNode, runCommand, refreshNodes, bcdName, t]);
 
   const handleDeleteBcd = useCallback(async () => {
     if (!selectedNode) return;
@@ -403,9 +419,12 @@ function App() {
                 diffDesc={diffDesc}
                 setDiffName={setDiffName}
                 setDiffDesc={setDiffDesc}
+                bcdName={bcdName}
+                setBcdName={setBcdName}
+                onAddBcd={handleAddBcd}
+                onUpdateBcd={handleUpdateBcdDesc}
                 onCreateDiff={handleCreateDiff}
                 onBoot={handleBootReboot}
-                onRepair={handleRepair}
                 onDeleteBcd={handleDeleteBcd}
                 onDelete={handleDelete}
                 isBusy={isBusy}

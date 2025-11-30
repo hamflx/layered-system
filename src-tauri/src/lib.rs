@@ -33,7 +33,9 @@ pub fn run() {
             commands::set_bootsequence_and_reboot,
             commands::delete_subtree,
             commands::delete_bcd,
-            commands::repair_bcd
+            commands::repair_bcd,
+            commands::add_bcd_entry,
+            commands::update_bcd_description
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -25,6 +25,10 @@ pub fn bcdedit_delete(guid: &str) -> Result<CommandOutput> {
     run_elevated_command("bcdedit", &["/delete", guid], None)
 }
 
+pub fn bcdedit_set_description(guid: &str, desc: &str) -> Result<CommandOutput> {
+    run_elevated_command("bcdedit", &["/set", guid, "description", desc], None)
+}
+
 /// Extract the identifier (GUID) for an entry whose device path references the given VHD path.
 pub fn extract_guid_for_vhd(bcd_output: &str, vhd_path: &str) -> Option<String> {
     let mut current_guid: Option<String> = None;

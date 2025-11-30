@@ -14,9 +14,12 @@ type Props = {
   diffDesc: string;
   setDiffName: (v: string) => void;
   setDiffDesc: (v: string) => void;
+  bcdName: string;
+  setBcdName: (v: string) => void;
+  onAddBcd: () => void;
+  onUpdateBcd: () => void;
   onCreateDiff: () => void;
   onBoot: () => void;
-  onRepair: () => void;
   onDeleteBcd: () => void;
   onDelete: () => void;
   isBusy: (cmd?: string) => boolean;
@@ -31,9 +34,12 @@ export function NodeDetail({
   diffDesc,
   setDiffName,
   setDiffDesc,
+  bcdName,
+  setBcdName,
+  onAddBcd,
+  onUpdateBcd,
   onCreateDiff,
   onBoot,
-  onRepair,
   onDeleteBcd,
   onDelete,
   isBusy,
@@ -128,6 +134,49 @@ export function NodeDetail({
           </div>
 
           <div className={sectionClass}>
+            <div className="flex flex-col gap-1">
+              <h4 className="text-lg font-semibold text-ink-900">{t("section-bcd-title")}</h4>
+              <p className="text-sm text-ink-700">{t("bcd-desc-tip")}</p>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+              <Input
+                value={bcdName}
+                onChange={(e) => setBcdName(e.target.value)}
+                placeholder={t("bcd-name-placeholder")}
+              />
+              {selected.bcd_guid ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={onUpdateBcd}
+                    disabled={!bcdName.trim() || isBusy("update_bcd_description")}
+                    loading={isBusy("update_bcd_description")}
+                  >
+                    {t("update-bcd-button")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={onDeleteBcd}
+                    disabled={isBusy("delete_bcd")}
+                    loading={isBusy("delete_bcd")}
+                  >
+                    {t("delete-bcd-button")}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="secondary"
+                  onClick={onAddBcd}
+                  disabled={!bcdName.trim() || isBusy("add_bcd_entry")}
+                  loading={isBusy("add_bcd_entry")}
+                >
+                  {t("add-bcd-button")}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className={sectionClass}>
             <h4 className="text-lg font-semibold text-ink-900">{t("node-actions")}</h4>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Button
@@ -137,17 +186,6 @@ export function NodeDetail({
                 loading={isBusy("set_bootsequence_and_reboot")}
               >
                 {t("set-boot-button")}
-              </Button>
-              <Button variant="secondary" onClick={onRepair} disabled={isBusy("repair_bcd")} loading={isBusy("repair_bcd")}>
-                {t("repair-bcd-button")}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={onDeleteBcd}
-                disabled={isBusy("delete_bcd")}
-                loading={isBusy("delete_bcd")}
-              >
-                {t("delete-bcd-button")}
               </Button>
               <Button variant="danger" onClick={onDelete} disabled={isBusy("delete_subtree")} loading={isBusy("delete_subtree")}>
                 {t("delete-subtree-button")}

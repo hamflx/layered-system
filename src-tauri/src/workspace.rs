@@ -8,8 +8,8 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::bcd::{
-    bcdedit_boot_sequence, bcdedit_delete, bcdedit_enum_all, extract_guid_for_partition_letter,
-    extract_guid_for_vhd, run_bcdboot,
+    bcdedit_boot_sequence, bcdedit_delete, bcdedit_enum_all, bcdedit_set_description,
+    extract_guid_for_partition_letter, extract_guid_for_vhd, run_bcdboot,
 };
 use crate::db::Database;
 use crate::diskpart::{
@@ -504,7 +504,44 @@ impl WorkspaceService {
         Ok(())
     }
 
+    pub fn add_bcd_entry(
+        &self,
+        node_id: &str,
+        description: Option<String>,
+    ) -> Result<Option<String>> {
+        let guid = self.repair_bcd_inner(node_id, description.as_deref())?;
+        Ok(guid)
+    }
+
+    pub fn update_bcd_description(&self, node_id: &str, description: &str) -> Result<()> {
+        let db = self.db()?;
+        let node = db
+            .fetch_node(node_id)?
+            .ok_or_else(|| AppError::Message("node not found".into()))?;
+        let guid = node
+            .bcd_guid
+            .clone()
+            .ok_or_else(|| AppError::Message("node missing bcd guid".into()))?;
+        let res = bcdedit_set_description(&guid, description)?;
+        log_command("bcdedit set description", &res, None);
+        if res.exit_code.unwrap_or(-1) != 0 {
+            return Err(command_error("bcdedit set description", &res, None));
+        }
+        db.insert_op(
+            &Uuid::new_v4().to_string(),
+            Some(node_id),
+            "update_bcd_description",
+            "ok",
+            description,
+        )?;
+        Ok(())
+    }
+
     pub fn repair_bcd(&self, node_id: &str) -> Result<Option<String>> {
+        self.repair_bcd_inner(node_id, None)
+    }
+
+    fn repair_bcd_inner(&self, node_id: &str, description: Option<&str>) -> Result<Option<String>> {
         let db = self.db()?;
         let node = db
             .fetch_node(node_id)?
@@ -569,6 +606,10 @@ impl WorkspaceService {
             .or_else(|| extract_guid_for_partition_letter(&bcd_enum.stdout, sys_letter));
         if let Some(guid) = &guid {
             db.update_node_bcd(&node.id, guid)?;
+            if let Some(desc) = description {
+                let res = bcdedit_set_description(guid, desc)?;
+                log_command("bcdedit set description", &res, None);
+            }
         }
 
         let detach_script = detach_vdisk_script(Path::new(&node.path), &[sys_letter]);
@@ -583,7 +624,7 @@ impl WorkspaceService {
             Some(&node.id),
             "repair_bcd",
             "ok",
-            "",
+            description.unwrap_or(""),
         )?;
         info!(
             "repair_bcd node={} guid={}",
