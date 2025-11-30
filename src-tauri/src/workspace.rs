@@ -479,7 +479,7 @@ fn log_diskpart_script(script: &Path) {
         Ok(content) => {
             let trimmed = content.trim();
             if !trimmed.is_empty() {
-                parts.push(format!("script={}", truncate(trimmed, 4000)));
+                parts.push(format!("script={trimmed}"));
             }
         }
         Err(err) => parts.push(format!("script_read_err={err}")),
@@ -502,9 +502,9 @@ fn log_command(name: &str, output: &CommandOutput, script: Option<&Path>) {
     let stderr = output.stderr.trim();
     let stdout = output.stdout.trim();
     if !stderr.is_empty() {
-        parts.push(format!("stderr={}", truncate(stderr, 800)));
+        parts.push(format!("stderr={stderr}"));
     } else if !stdout.is_empty() {
-        parts.push(format!("stdout={}", truncate(stdout, 800)));
+        parts.push(format!("stdout={stdout}"));
     }
     info!("{name}: {}", parts.join(" | "));
 }
@@ -520,19 +520,11 @@ fn command_error(name: &str, output: &CommandOutput, script: Option<&Path>) -> A
     let stderr = output.stderr.trim();
     let stdout = output.stdout.trim();
     if !stderr.is_empty() {
-        parts.push(format!("stderr={}", truncate(stderr, 800)));
+        parts.push(format!("stderr={stderr}"));
     } else if !stdout.is_empty() {
-        parts.push(format!("stdout={}", truncate(stdout, 800)));
+        parts.push(format!("stdout={stdout}"));
     } else {
         parts.push("no output".into());
     }
     AppError::Message(format!("{name} failed: {}", parts.join(" | ")))
-}
-
-fn truncate(text: &str, max: usize) -> String {
-    if text.len() > max {
-        format!("{}...", &text[..max])
-    } else {
-        text.to_string()
-    }
 }

@@ -83,17 +83,9 @@ fn log_command(program: &str, args: Vec<String>, workdir: Option<&Path>, output:
     let stderr = output.stderr.trim();
     let stdout = output.stdout.trim();
     if !stderr.is_empty() {
-        parts.push(format!("stderr={}", truncate(stderr, 800)));
+        parts.push(format!("stderr={stderr}"));
     } else if !stdout.is_empty() {
-        parts.push(format!("stdout={}", truncate(stdout, 800)));
+        parts.push(format!("stdout={stdout}"));
     }
     info!("{}", parts.join(" | "));
-}
-
-fn truncate(text: &str, max: usize) -> String {
-    if text.len() > max {
-        format!("{}...", &text[..max])
-    } else {
-        text.to_string()
-    }
 }
