@@ -20,6 +20,7 @@
   "message-boot-set": "Boot sequence set, rebooting...",
   "message-deleted": "Subtree deleted.",
   "message-repaired-bcd": "Repaired BCD: {{guid}}",
+  "message-deleted-bcd": "Deleted BCD entry.",
   "message-no-guid": "no guid",
   "message-workspace-closed": "Workspace closed.",
   "close-workspace": "Close workspace",
@@ -67,6 +68,7 @@
   "detail-desc": "Description",
   "set-boot-button": "Set next boot and reboot",
   "repair-bcd-button": "Repair BCD",
+  "delete-bcd-button": "Delete BCD entry",
   "delete-subtree-button": "Delete subtree",
   "detail-empty": "Select a node on the left"
 }

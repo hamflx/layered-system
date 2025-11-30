@@ -480,6 +480,30 @@ impl WorkspaceService {
         Ok(())
     }
 
+    pub fn delete_bcd(&self, node_id: &str) -> Result<()> {
+        let db = self.db()?;
+        let node = db
+            .fetch_node(node_id)?
+            .ok_or_else(|| AppError::Message("node not found".into()))?;
+        if let Some(guid) = node.bcd_guid.as_ref() {
+            let res = bcdedit_delete(guid)?;
+            log_command("bcdedit delete", &res, None);
+            if res.exit_code.unwrap_or(-1) != 0 {
+                return Err(command_error("bcdedit delete", &res, None));
+            }
+        }
+        db.clear_node_bcd(node_id)?;
+        db.insert_op(
+            &Uuid::new_v4().to_string(),
+            Some(node_id),
+            "delete_bcd",
+            "ok",
+            "",
+        )?;
+        info!("delete_bcd node={node_id}");
+        Ok(())
+    }
+
     pub fn repair_bcd(&self, node_id: &str) -> Result<Option<String>> {
         let db = self.db()?;
         let node = db

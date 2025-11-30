@@ -182,6 +182,15 @@ impl Database {
         Ok(())
     }
 
+    pub fn clear_node_bcd(&self, id: &str) -> Result<()> {
+        let mut conn = self.connection();
+        conn.execute(
+            "UPDATE nodes SET bcd_guid = NULL, boot_files_ready = 0 WHERE id = ?1",
+            params![id],
+        )?;
+        Ok(())
+    }
+
     pub fn fetch_nodes(&self) -> Result<Vec<Node>> {
         let conn = self.connection();
         let mut stmt = conn.prepare(

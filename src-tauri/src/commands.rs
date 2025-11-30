@@ -171,6 +171,16 @@ pub async fn delete_subtree(node_id: String, state: State<'_, SharedState>) -> C
 }
 
 #[tauri::command]
+pub async fn delete_bcd(node_id: String, state: State<'_, SharedState>) -> CmdResult<()> {
+    let state = state.inner().clone();
+    run_blocking_cmd(move || {
+        let svc = WorkspaceService::new(state);
+        svc.delete_bcd(&node_id).map_err(|e| e.to_string())
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn repair_bcd(
     node_id: String,
     state: State<'_, SharedState>,

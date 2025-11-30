@@ -260,6 +260,17 @@ function App() {
     }
   }, [selectedNode, runCommand, refreshNodes, t]);
 
+  const handleDeleteBcd = useCallback(async () => {
+    if (!selectedNode) return;
+    try {
+      await runCommand("delete_bcd", { nodeId: selectedNode });
+      setMessage(t("message-deleted-bcd"));
+      await refreshNodes();
+    } catch {
+      // handled in runCommand
+    }
+  }, [selectedNode, runCommand, refreshNodes, t]);
+
   const handleCloseWorkspace = useCallback(() => {
     setWorkspaceReady(false);
     setNodes([]);
@@ -395,6 +406,7 @@ function App() {
                 onCreateDiff={handleCreateDiff}
                 onBoot={handleBootReboot}
                 onRepair={handleRepair}
+                onDeleteBcd={handleDeleteBcd}
                 onDelete={handleDelete}
                 isBusy={isBusy}
                 t={t}

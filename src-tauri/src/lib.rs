@@ -32,6 +32,7 @@ pub fn run() {
             commands::create_diff_vhd,
             commands::set_bootsequence_and_reboot,
             commands::delete_subtree,
+            commands::delete_bcd,
             commands::repair_bcd
         ])
         .run(tauri::generate_context!())

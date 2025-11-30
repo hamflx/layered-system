@@ -20,6 +20,7 @@
   "message-boot-set": "已设置下次启动并重启...",
   "message-deleted": "子树已删除。",
   "message-repaired-bcd": "已修复 BCD：{{guid}}",
+  "message-deleted-bcd": "已删除 BCD 引导项。",
   "message-no-guid": "无 GUID",
   "message-workspace-closed": "工作区已关闭。",
   "close-workspace": "关闭工作区",
@@ -67,6 +68,7 @@
   "detail-desc": "描述",
   "set-boot-button": "设置下次启动并重启",
   "repair-bcd-button": "修复 BCD",
+  "delete-bcd-button": "删除 BCD 引导项",
   "delete-subtree-button": "删除子树",
   "detail-empty": "请选择左侧节点"
 }

@@ -17,6 +17,7 @@ type Props = {
   onCreateDiff: () => void;
   onBoot: () => void;
   onRepair: () => void;
+  onDeleteBcd: () => void;
   onDelete: () => void;
   isBusy: (cmd?: string) => boolean;
   t: (key: string, options?: any) => string;
@@ -33,6 +34,7 @@ export function NodeDetail({
   onCreateDiff,
   onBoot,
   onRepair,
+  onDeleteBcd,
   onDelete,
   isBusy,
   t,
@@ -138,6 +140,14 @@ export function NodeDetail({
               </Button>
               <Button variant="secondary" onClick={onRepair} disabled={isBusy("repair_bcd")} loading={isBusy("repair_bcd")}>
                 {t("repair-bcd-button")}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={onDeleteBcd}
+                disabled={isBusy("delete_bcd")}
+                loading={isBusy("delete_bcd")}
+              >
+                {t("delete-bcd-button")}
               </Button>
               <Button variant="danger" onClick={onDelete} disabled={isBusy("delete_subtree")} loading={isBusy("delete_subtree")}>
                 {t("delete-subtree-button")}
