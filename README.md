@@ -10,6 +10,8 @@ Layered System 允许你像管理 Git 分支一样管理你的 Windows 系统。
 
 不再因为安装了流氓软件而重装系统，不再因为开发环境冲突而头秃。你可以在一个干净的“母盘”上，为不同的项目、游戏或测试需求创建独立的“子盘”。
 
+[告别重装系统：我用 VHDX 差分链给 Windows 写了个“时光机”](https://hamflx.dev/posts/2025/11/31/layered-system)
+
 ## Features
 
 - **Git-like System Management**: Manage your system like git branches (Base -> Feature A / Feature B).
@@ -68,3 +70,4 @@ Layered System leverages native Windows commands:
 ## License
 
 [MIT](LICENSE)
+
