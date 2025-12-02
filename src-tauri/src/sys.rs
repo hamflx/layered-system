@@ -12,12 +12,27 @@ pub struct CommandOutput {
     pub stderr: String,
 }
 
-pub fn run_command(program: &str, args: &[&str], workdir: Option<&Path>) -> Result<CommandOutput> {
-    let mut cmd = Command::new(program);
-    cmd.args(args);
+fn configure_command_common(
+    cmd: &mut Command,
+    workdir: Option<&Path>,
+) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
+
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
     if let Some(dir) = workdir {
         cmd.current_dir(dir);
     }
+}
+
+pub fn run_command(program: &str, args: &[&str], workdir: Option<&Path>) -> Result<CommandOutput> {
+    let mut cmd = Command::new(program);
+    cmd.args(args);
+    configure_command_common(&mut cmd, workdir);
     let output = cmd
         .output()
         .map_err(|e| AppError::Message(format!("Failed to run {program}: {e}")))?;
@@ -53,9 +68,7 @@ fn run_elevated_command_impl(
 ) -> std::result::Result<CommandOutput, String> {
     let mut cmd = Command::new(program);
     cmd.args(&args);
-    if let Some(dir) = workdir {
-        cmd.current_dir(dir);
-    }
+    configure_command_common(&mut cmd, workdir);
     let output = cmd
         .output()
         .map_err(|e| format!("Failed to run {program}: {e}"))?;
